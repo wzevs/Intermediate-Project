@@ -3,7 +3,10 @@
 სტუდენტების მართვის სისტემა
 OOP: ინკაფსულაცია, მემკვიდრეობა, პოლიმორფიზმი + შეყვანის ვალიდაცია.
 დამატებულია: Faker-ით შემთხვევითი სტუდენტების გენერირება.
+დამატებულია: მონაცემების შენახვა/ჩატვირთვა JSON ფაილში (students.json).
 """
+import json
+import os
 import random
 from abc import ABC, abstractmethod
 
@@ -12,6 +15,9 @@ try:
     FAKER_AVAILABLE = True
 except ImportError:
     FAKER_AVAILABLE = False
+
+
+DATA_FILE = "students.json"
 
 
 class Person(ABC):
@@ -82,15 +88,29 @@ class Student(Person):
             f"შეფასება: {self.grade}"
         )
 
+    def to_dict(self) -> dict:
+        """გარდაქმნის სტუდენტს JSON-თავსებად dict-ად შესანახად."""
+        return {
+            "name": self.name,
+            "roll_number": self.roll_number,
+            "grade": self.grade,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "Student":
+        """ქმნის Student ობიექტს JSON-დან ჩატვირთული dict-იდან."""
+        return cls(data["name"], data["roll_number"], data["grade"])
+
     def __str__(self) -> str:
         return self.display_info()
 
 
 class StudentManager:
-    """სტუდენტების სიის მართვა."""
+    """სტუდენტების სიის მართვა + JSON ფაილში შენახვა/ჩატვირთვა."""
 
-    def __init__(self) -> None:
+    def __init__(self, data_file: str = DATA_FILE) -> None:
         self._students: list[Student] = []
+        self._data_file = data_file
 
     def add_student(self, student: Student) -> None:
         if self.find_by_roll(student.roll_number) is not None:
@@ -124,6 +144,44 @@ class StudentManager:
         while candidate in existing_rolls:
             candidate += 1
         return candidate
+
+    # ---------- JSON შენახვა / ჩატვირთვა ----------
+
+    def save_to_file(self, filepath: str | None = None) -> None:
+        """ინახავს ყველა სტუდენტს JSON ფაილში."""
+        filepath = filepath or self._data_file
+        data = [student.to_dict() for student in self._students]
+        try:
+            with open(filepath, "w", encoding="utf-8") as file:
+                json.dump(data, file, ensure_ascii=False, indent=2)
+        except OSError as error:
+            print(f" ფაილში შენახვა ვერ მოხერხდა: {error}")
+
+    def load_from_file(self, filepath: str | None = None) -> None:
+        """ტვირთავს სტუდენტებს JSON ფაილიდან (თუ ის არსებობს)."""
+        filepath = filepath or self._data_file
+        if not os.path.exists(filepath):
+            return
+
+        try:
+            with open(filepath, "r", encoding="utf-8") as file:
+                raw_data = json.load(file)
+        except (OSError, json.JSONDecodeError) as error:
+            print(f" ფაილის წაკითხვა ვერ მოხერხდა ({filepath}): {error}")
+            return
+
+        self._students.clear()
+        loaded_count = 0
+        for entry in raw_data:
+            try:
+                student = Student.from_dict(entry)
+                self._students.append(student)
+                loaded_count += 1
+            except (ValueError, KeyError) as error:
+                print(f" გამოტოვებულია არასწორი ჩანაწერი ფაილში: {error}")
+
+        if loaded_count:
+            print(f" ჩაიტვირთა {loaded_count} სტუდენტი ფაილიდან '{filepath}'.")
 
 
 def get_non_empty_name(prompt: str) -> str:
@@ -161,7 +219,8 @@ def add_student_menu(manager: StudentManager) -> None:
     try:
         student = Student(name, roll, grade)
         manager.add_student(student)
-        print(f" სტუდენტი დაემატა: {student}")
+        manager.save_to_file()
+        print(f" სტუდენტი დაემატა და შენახულია: {student}")
     except ValueError as error:
         print(f" {error}")
 
@@ -193,8 +252,9 @@ def update_grade_menu(manager: StudentManager) -> None:
     new_grade = get_valid_grade("ახალი შეფასება (A/B/C/D/F): ")
     try:
         manager.update_grade(roll, new_grade)
+        manager.save_to_file()
         student = manager.find_by_roll(roll)
-        print(f" შეფასება განახლდა: {student.display_info()}")
+        print(f" შეფასება განახლდა და შენახულია: {student.display_info()}")
     except ValueError as error:
         print(f" {error}")
 
@@ -232,11 +292,27 @@ def generate_random_students(manager: StudentManager) -> None:
             # მაგრამ ვალიდაციის შეცდომა მაინც უსაფრთხოდ ვამუშავოთ
             print(f" {error}")
 
-    print(f"\n სულ დაემატა {created} შემთხვევითი სტუდენტი.")
+    if created:
+        manager.save_to_file()
+
+    print(f"\n სულ დაემატა {created} შემთხვევითი სტუდენტი (შენახულია ფაილში).")
+
+
+def save_menu(manager: StudentManager) -> None:
+    print("\n--- ხელით შენახვა ---")
+    manager.save_to_file()
+    print(f" მონაცემები შენახულია ფაილში '{manager._data_file}'.")
+
+
+def load_menu(manager: StudentManager) -> None:
+    print("\n--- ხელით ჩატვირთვა ---")
+    manager.load_from_file()
 
 
 def run() -> None:
     manager = StudentManager()
+    manager.load_from_file()  # ავტომატური ჩატვირთვა გაშვებისას
+
     while True:
         print("\n" + "=" * 40)
         print("   სტუდენტების მართვის სისტემა")
@@ -246,8 +322,10 @@ def run() -> None:
         print("3. სტუდენტის ძებნა ნომრის მიხედვით")
         print("4. შეფასების განახლება")
         print("5. შემთხვევითი სტუდენტების გენერირება (Faker)")
+        print("6. ხელით შენახვა JSON ფაილში")
+        print("7. ხელით ჩატვირთვა JSON ფაილიდან")
         print("0. გასვლა")
-        choice = input("აირჩიეთ ოპერაცია (0-5): ").strip()
+        choice = input("აირჩიეთ ოპერაცია (0-7): ").strip()
         if choice == "1":
             add_student_menu(manager)
         elif choice == "2":
@@ -258,6 +336,10 @@ def run() -> None:
             update_grade_menu(manager)
         elif choice == "5":
             generate_random_students(manager)
+        elif choice == "6":
+            save_menu(manager)
+        elif choice == "7":
+            load_menu(manager)
         elif choice == "0":
             print("პროგრამა დასრულდა.")
             break

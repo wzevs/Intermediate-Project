@@ -2,14 +2,19 @@
 """
 მოდული : ბანკომატის სიმულატორი
 ინახავს მომხმარებლის ანგარიშებს accounts.txt ფაილში.
-მოიცავს ავტორიზაციას, ბალანსის შემოწმებას, თანხის შეტანას და გატანას.
+მოიცავს ავტორიზაციას, ახალი ანგარიშის რეგისტრაციას, ბალანსის შემოწმებას,
+თანხის შეტანას/გატანას და ტრანზაქციების ლოგირებას (transactions.txt).
 """
 
 import os
+from datetime import datetime
 from typing import Optional
 
 ACCOUNTS_FILE = "accounts.txt"
+TRANSACTIONS_FILE = "transactions.txt"
 DEFAULT_BALANCE = 500.0
+MIN_AGE = 18
+MAX_AGE = 120
 
 # საწყისი ანგარიშები (თუ ფაილი არ არსებობს)
 # ფორმატი: ანგარიში:PIN:სახელი:გვარი:ასაკი:ბალანსი
@@ -84,6 +89,76 @@ def full_name(account: dict) -> str:
     return f"{account['first_name']} {account['last_name']}"
 
 
+# ---------- ტრანზაქციების ლოგირება ----------
+
+def log_transaction(account_id: str, tx_type: str, amount: float, balance_after: float) -> None:
+    """
+    ამატებს ერთ ჩანაწერს ტრანზაქციების ლოგ-ფაილში.
+    ფორმატი: თარიღი-დრო:ანგარიში:ტიპი:თანხა:ბალანსი_ტრანზაქციის_შემდეგ
+    """
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    line = f"{timestamp}:{account_id}:{tx_type}:{amount:.2f}:{balance_after:.2f}\n"
+    try:
+        with open(TRANSACTIONS_FILE, "a", encoding="utf-8") as file:
+            file.write(line)
+    except IOError as error:
+        print(f" ტრანზაქციის ლოგირება ვერ მოხერხდა: {error}")
+
+
+def get_transactions(account_id: str) -> list[dict]:
+    """კითხულობს და აბრუნებს მითითებული ანგარიშის ყველა ტრანზაქციას ლოგ-ფაილიდან."""
+    if not os.path.exists(TRANSACTIONS_FILE):
+        return []
+
+    records = []
+    try:
+        with open(TRANSACTIONS_FILE, "r", encoding="utf-8") as file:
+            for line in file:
+                line = line.strip()
+                if not line:
+                    continue
+                parts = line.split(":")
+                if len(parts) != 5:
+                    continue
+                timestamp, acc_id, tx_type, amount_str, balance_str = parts
+                if acc_id != account_id:
+                    continue
+                try:
+                    records.append(
+                        {
+                            "timestamp": timestamp,
+                            "type": tx_type,
+                            "amount": float(amount_str),
+                            "balance_after": float(balance_str),
+                        }
+                    )
+                except ValueError:
+                    continue
+    except IOError as error:
+        print(f" ტრანზაქციების ფაილის წაკითხვა ვერ მოხერხდა: {error}")
+
+    return records
+
+
+def show_transaction_history(account_id: str) -> None:
+    """აჩვენებს მითითებული ანგარიშის ტრანზაქციების ისტორიას ქრონოლოგიური თანმიმდევრობით."""
+    records = get_transactions(account_id)
+    print(f"\n--- ტრანზაქციების ისტორია (ანგარიში {account_id}) ---")
+
+    if not records:
+        print("ტრანზაქციები არ მოიძებნა.")
+        return
+
+    for record in records:
+        print(
+            f"  [{record['timestamp']}] {record['type']:<9} "
+            f"თანხა: {record['amount']:.2f} ლარი | "
+            f"ბალანსი შემდეგ: {record['balance_after']:.2f} ლარი"
+        )
+
+
+# ---------- ავტორიზაცია ----------
+
 def authenticate(accounts: dict) -> Optional[str]:
     """ითხოვს ანგარიშის ნომერს და PIN-ს. წარმატებისას აბრუნებს ანგარიშის ID-ს."""
     account_id = input("შეიყვანეთ ანგარიშის ნომერი: ").strip()
@@ -98,11 +173,98 @@ def authenticate(accounts: dict) -> Optional[str]:
     
     account = accounts[account_id]
     print(
-        f"✅ გამარჯობა, {full_name(account)}! "
+        f" გამარჯობა, {full_name(account)}! "
         f"(ასაკი: {account['age']}, ანგარიში: {account_id})\n"
     )
     return account_id
 
+
+# ---------- ახალი ანგარიშის რეგისტრაცია ----------
+
+def generate_new_account_id(accounts: dict) -> str:
+    """პოულობს უახლოეს თავისუფალ 4-ნიშნა ანგარიშის ნომერს (1001-დან დაწყებული)."""
+    candidate = 1001
+    while str(candidate) in accounts:
+        candidate += 1
+    return str(candidate)
+
+
+def get_non_empty_text(prompt: str) -> str:
+    while True:
+        value = input(prompt).strip()
+        if value:
+            return value
+        print(" შეცდომა: ველი არ შეიძლება იყოს ცარიელი.\n")
+
+
+def get_valid_age(prompt: str) -> int:
+    while True:
+        try:
+            age = int(input(prompt).strip())
+            if MIN_AGE <= age <= MAX_AGE:
+                return age
+            print(f" შეცდომა: ასაკი უნდა იყოს {MIN_AGE}-{MAX_AGE} შორის.\n")
+        except ValueError:
+            print(" შეცდომა: შეიყვანეთ ვალიდური მთელი რიცხვი.\n")
+
+
+def get_valid_pin(prompt: str) -> str:
+    while True:
+        pin = input(prompt).strip()
+        if len(pin) == 4 and pin.isdigit():
+            return pin
+        print(" შეცდომა: PIN უნდა შედგებოდეს ზუსტად 4 ციფრისგან.\n")
+
+
+def get_valid_initial_deposit(prompt: str) -> float:
+    while True:
+        raw = input(prompt).strip()
+        if raw == "":
+            return 0.0
+        try:
+            amount = float(raw)
+            if amount >= 0:
+                return amount
+            print(" შეცდომა: თანხა არ შეიძლება იყოს უარყოფითი.\n")
+        except ValueError:
+            print(" შეცდომა: შეიყვანეთ ვალიდური რიცხვი.\n")
+
+
+def register_account(accounts: dict) -> str:
+    """
+    ახალი ანგარიშის შექმნა: ითხოვს პირად მონაცემებს, PIN-ს და (სურვილისამებრ)
+    საწყის შენატანს. ინახავს accounts.txt-ში და ლოგავს REGISTER ტრანზაქციას.
+    """
+    print("\n--- ახალი ანგარიშის გახსნა ---")
+    first_name = get_non_empty_text("სახელი: ")
+    last_name = get_non_empty_text("გვარი: ")
+    age = get_valid_age(f"ასაკი ({MIN_AGE}-{MAX_AGE}): ")
+    pin = get_valid_pin("აირჩიეთ 4-ნიშნა PIN კოდი: ")
+    initial_deposit = get_valid_initial_deposit(
+        "საწყისი შენატანი (Enter გამოტოვებისთვის, ნაგულისხმევი 0): "
+    )
+
+    account_id = generate_new_account_id(accounts)
+    accounts[account_id] = {
+        "pin": pin,
+        "first_name": first_name,
+        "last_name": last_name,
+        "age": age,
+        "balance": initial_deposit,
+    }
+    save_accounts(accounts)
+    log_transaction(account_id, "REGISTER", initial_deposit, initial_deposit)
+
+    print(
+        f"\n ანგარიში წარმატებით შეიქმნა! "
+        f"თქვენი ანგარიშის ნომერია: {account_id} — გთხოვთ დაიმახსოვროთ."
+    )
+    print(f" მფლობელი: {full_name(accounts[account_id])} | ბალანსი: {initial_deposit:.2f} ლარი\n")
+
+    return account_id
+
+
+# ---------- ოპერაციები ----------
 
 def get_valid_amount(prompt: str) -> float:
     """ითხოვს თანხის ოდენობას და ამოწმებს, რომ დადებითი რიცხვი იყოს."""
@@ -119,24 +281,23 @@ def get_valid_amount(prompt: str) -> float:
 def check_balance(accounts: dict, account_id: str) -> None:
     """აჩვენებს მომხმარებლის მონაცემებს და მიმდინარე ბალანსს."""
     account = accounts[account_id]
-    print(f"\n👤 მფლობელი: {full_name(account)}")
-    print(f"🎂 ასაკი: {account['age']}")
-    print(f"💰 ბალანსი: {account['balance']:.2f} ლარი")
+    print(f"\n მფლობელი: {full_name(account)}")
+    print(f" ასაკი: {account['age']}")
+    print(f" ბალანსი: {account['balance']:.2f} ლარი")
 
 
 def deposit(accounts: dict, account_id: str) -> None:
-    """თანხის შეტანა ანგარიშზე და ფაილის განახლება."""
+    """თანხის შეტანა ანგარიშზე, ფაილის განახლება და ტრანზაქციის ლოგირება."""
     amount = get_valid_amount("\nშეიყვანეთ შესატანი თანხის ოდენობა: ")
     accounts[account_id]["balance"] += amount
     save_accounts(accounts)
-    print(
-        f"✅ თანხა წარმატებით შემოვიდა. "
-        f"ახალი ბალანსი: {accounts[account_id]['balance']:.2f} ლარი"
-    )
+    new_balance = accounts[account_id]["balance"]
+    log_transaction(account_id, "DEPOSIT", amount, new_balance)
+    print(f" თანხა წარმატებით შემოვიდა. ახალი ბალანსი: {new_balance:.2f} ლარი")
 
 
 def withdraw(accounts: dict, account_id: str) -> None:
-    """თანხის გატანა ანგარიშიდან (საკმარისი ბალანსის შემოწმებით)."""
+    """თანხის გატანა ანგარიშიდან (საკმარისი ბალანსის შემოწმებით) და ლოგირება."""
     amount = get_valid_amount("\nშეიყვანეთ გასატანი თანხის ოდენობა: ")
     balance = accounts[account_id]["balance"]
     
@@ -145,14 +306,14 @@ def withdraw(accounts: dict, account_id: str) -> None:
             f" ტრანზაქცია უარყოფილია: ანგარიშზე არ არის საკმარისი თანხა! "
             f"(ბალანსი: {balance:.2f} ლარი)"
         )
+        log_transaction(account_id, "WITHDRAW_FAILED", amount, balance)
         return
     
     accounts[account_id]["balance"] -= amount
     save_accounts(accounts)
-    print(
-        f"✅ თანხა გაცემულია. "
-        f"დარჩენილი ბალანსი: {accounts[account_id]['balance']:.2f} ლარი"
-    )
+    new_balance = accounts[account_id]["balance"]
+    log_transaction(account_id, "WITHDRAW", amount, new_balance)
+    print(f" თანხა გაცემულია. დარჩენილი ბალანსი: {new_balance:.2f} ლარი")
 
 
 def show_accounts(accounts: dict) -> None:
@@ -165,6 +326,33 @@ def show_accounts(accounts: dict) -> None:
         )
 
 
+def account_operations_menu(accounts: dict, account_id: str) -> None:
+    """მთავარი ოპერაციების მენიუ ავტორიზებული/ახლადრეგისტრირებული მომხმარებლისთვის."""
+    while True:
+        print("\nხელმისაწვდომი ოპერაციები:")
+        print("1. ბალანსის შემოწმება")
+        print("2. თანხის შეტანა")
+        print("3. თანხის გატანა")
+        print("4. ტრანზაქციების ისტორია")
+        print("0. გასვლა")
+
+        choice = input("აირჩიეთ ოპერაცია (0-4): ").strip()
+
+        if choice == "1":
+            check_balance(accounts, account_id)
+        elif choice == "2":
+            deposit(accounts, account_id)
+        elif choice == "3":
+            withdraw(accounts, account_id)
+        elif choice == "4":
+            show_transaction_history(account_id)
+        elif choice == "0":
+            print("ბანკომატის მოდული დაიხურა.")
+            break
+        else:
+            print(" არასწორი არჩევანი. სცადეთ თავიდან.")
+
+
 def run_atm() -> None:
     print("=" * 40)
     print("             მოდული: ბანკომატი")
@@ -172,32 +360,25 @@ def run_atm() -> None:
     
     accounts = load_accounts()
     show_accounts(accounts)
-    
-    account_id = None
-    while account_id is None:
-        account_id = authenticate(accounts)
-        if account_id is None:
-            retry = input("გსურთ თავიდან ცდა? (კ/ა): ").strip().lower()
-            if retry not in ("კ", "k", "yes", "y", "კი"):
-                print("ბანკომატის მოდული დაიხურა.")
-                return
-                
+
     while True:
-        print("\nხელმისაწვდომი ოპერაციები:")
-        print("1. ბალანსის შემოწმება")
-        print("2. თანხის შეტანა")
-        print("3. თანხის გატანა")
+        print("\n--- მთავარი მენიუ ---")
+        print("1. შესვლა არსებულ ანგარიშზე")
+        print("2. ახალი ანგარიშის გახსნა")
         print("0. გასვლა")
-        
-        choice = input("აირჩიეთ ოპერაცია (0-3): ").strip()
-        
-        if choice == "1":
-            check_balance(accounts, account_id)
-        elif choice == "2":
-            deposit(accounts, account_id)
-        elif choice == "3":
-            withdraw(accounts, account_id)
-        elif choice == "0":
+        main_choice = input("აირჩიეთ ოპერაცია (0-2): ").strip()
+
+        if main_choice == "1":
+            account_id = authenticate(accounts)
+            if account_id is None:
+                continue
+            account_operations_menu(accounts, account_id)
+            break
+        elif main_choice == "2":
+            account_id = register_account(accounts)
+            account_operations_menu(accounts, account_id)
+            break
+        elif main_choice == "0":
             print("ბანკომატის მოდული დაიხურა.")
             break
         else:
