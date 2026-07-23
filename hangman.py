@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 """
 თამაში : Hangman (სიტყვების გამოცნობა)
-პროგრამა ირჩევს შემთხვევით სიტყვას და მომხმარებელი ცდილობს მის გამოცნობას ასო-ასო.
+პროგრამა ირჩევს შემთხვევით სიტყვას (ჰინტთან ერთად) და მომხმარებელი ცდილობს
+მის გამოცნობას ასო-ასო ან პირდაპირ მთელი სიტყვის შეტანით.
 
 მოიცავს:
+- სიტყვების ლექსიკონს (word -> hint), საიდანაც ხდება შემთხვევითი არჩევა
+- ჰინტის ჩვენებას თამაშის დაწყებისას და მოთხოვნისამებრ (შეიყვანეთ "?")
 - შეყვანილი ასოების ვალიდაციას (მხოლოდ ერთი ქართული ასო)
+- მთელი სიტყვის ერთბაშად გამოცნობის შესაძლებლობას
 - უკვე გამოყენებული ასოების კონტროლს
 - მცდელობების დინამიკურ ჩვენებას (ASCII ფიგურით)
 - სიცოცხლეების მოქნილ, მომხმარებლის მიერ განსაზღვრულ რაოდენობას
@@ -15,6 +19,18 @@ import random
 
 # ქართული ანბანის ასოები — გამოიყენება შესატანი ასოს ვალიდაციისთვის
 GEORGIAN_LETTERS = set("აბგდევზთიკლმნოპჟრსტუფქღყშჩცძწჭხჯჰ")
+
+# სიტყვების ლექსიკონი: სიტყვა -> ჰინტი
+WORDS = {
+    "პითონი": "პროგრამირების ენა, სახელწოდებული გველის მიხედვით",
+    "პროგრამირება": "კომპიუტერული კოდის წერის პროცესი",
+    "დეველოპერი": "ადამიანი, რომელიც წერს პროგრამებს",
+    "კომპიუტერი": "მოწყობილობა, რომელზეც მუშაობს ეს პროგრამა",
+    "მონაცემები": "ინფორმაცია, რომელსაც პროგრამა ამუშავებს",
+    "ალგორითმი": "ნაბიჯების თანმიმდევრობა ამოცანის გადასაჭრელად",
+    "ფუნქცია": "კოდის ბლოკი, რომელსაც შეგვიძლია მრავალჯერ გამოვიძახოთ",
+    "ცვლადი": "სახელი, რომელშიც მონაცემს ვინახავთ",
+}
 
 # Hangman-ის ვიზუალური სტადიები, ინდექსირებული არასწორი მცდელობების რაოდენობით
 HANGMAN_STAGES = [
@@ -77,16 +93,14 @@ HANGMAN_STAGES = [
 ]
 
 
-def get_random_word() -> str:
+def get_random_word() -> tuple[str, str]:
     """
-    აბრუნებს შემთხვევით სიტყვას წინასწარ განსაზღვრული სიიდან.
-    შეგიძლია სიტყვები შენი სურვილისამებრ შეცვალო ან დაამატო.
+    აბრუნებს შემთხვევით (სიტყვა, ჰინტი) წყვილს WORDS ლექსიკონიდან.
+    შეგიძლია სიტყვები და ჰინტები შენი სურვილისამებრ შეცვალო ან დაამატო.
     """
-    words = [
-        "პითონი", "პროგრამირება", "დეველოპერი", "კომპიუტერი",
-        "მონაცემები", "ალგორითმი", "ფუნქცია", "ცვლადი"
-    ]
-    return random.choice(words)
+    word = random.choice(list(WORDS.keys()))
+    hint = WORDS[word]
+    return word, hint
 
 
 def get_max_lives() -> int:
@@ -104,10 +118,10 @@ def get_max_lives() -> int:
         try:
             max_lives = int(raw_value)
         except ValueError:
-            print(f"❌ შეცდომა: '{raw_value}' არ არის მთელი რიცხვი. სცადეთ თავიდან.\n")
+            print(f" შეცდომა: '{raw_value}' არ არის მთელი რიცხვი. სცადეთ თავიდან.\n")
             continue
         if max_lives < min_lives or max_lives > max_lives_limit:
-            print(f"❌ შეცდომა: აირჩიეთ რიცხვი {min_lives}-დან {max_lives_limit}-მდე დიაპაზონში.\n")
+            print(f" შეცდომა: აირჩიეთ რიცხვი {min_lives}-დან {max_lives_limit}-მდე დიაპაზონში.\n")
             continue
         return max_lives
 
@@ -122,20 +136,53 @@ def get_valid_letter(used_letters: set) -> str:
 
         # ვალიდაცია 1: ცარიელი შეყვანა ან ერთზე მეტი სიმბოლო
         if len(letter) != 1:
-            print("❌ შეცდომა: გთხოვთ შემოიტანოთ მხოლოდ ერთი ასო!\n")
+            print(" შეცდომა: გთხოვთ შემოიტანოთ მხოლოდ ერთი ასო!\n")
             continue
 
         # ვალიდაცია 2: მხოლოდ ქართული ანბანის ასოები
         if letter not in GEORGIAN_LETTERS:
-            print(f"❌ შეცდომა: '{letter}' არ არის ქართული ანბანის ასო.\n")
+            print(f" შეცდომა: '{letter}' არ არის ქართული ანბანის ასო.\n")
             continue
 
         # ვალიდაცია 3: უკვე გამოყენებული ასო
         if letter in used_letters:
-            print(f"⚠️  ასო '{letter}' უკვე ნაცადი გაქვთ. აირჩიეთ სხვა.\n")
+            print(f"  ასო '{letter}' უკვე ნაცადი გაქვთ. აირჩიეთ სხვა.\n")
             continue
 
         return letter
+
+
+def get_user_guess(used_letters: set, hint: str) -> tuple[str, str]:
+    """
+    ითხოვს მომხმარებლისგან შეყვანას, რომელიც შეიძლება იყოს:
+    - ერთი ქართული ასო
+    - მთელი სიტყვა (თუ მომხმარებელი მიხვდა)
+    - "?" ან "ჰინტი" — ჰინტის ხელახლა სანახავად, ცხოვრებას არ აკლებს
+
+    აბრუნებს წყვილს: (ტიპი, მნიშვნელობა), სადაც ტიპი არის "letter" ან "word".
+    """
+    while True:
+        raw = input("შემოიტანეთ ასო, ან თუ მიხვდით — მთელი სიტყვა (ჰინტისთვის აკრიფეთ '?'): ").strip().lower()
+
+        if raw in ("?", "ჰინტი"):
+            print(f" ჰინტი: {hint}\n")
+            continue
+
+        if len(raw) == 0:
+            print(" შეცდომა: შეყვანა ცარიელია. სცადეთ თავიდან.\n")
+            continue
+
+        if len(raw) == 1:
+            if raw not in GEORGIAN_LETTERS:
+                print(f" შეცდომა: '{raw}' არ არის ქართული ანბანის ასო.\n")
+                continue
+            if raw in used_letters:
+                print(f"  ასო '{raw}' უკვე ნაცადი გაქვთ. აირჩიეთ სხვა.\n")
+                continue
+            return "letter", raw
+
+        # თუ ერთზე მეტი სიმბოლოა შეყვანილი — ეს არის მთელი სიტყვის მცდელობა
+        return "word", raw
 
 
 def display_current_state(word: str, guessed_letters: set) -> str:
@@ -161,35 +208,50 @@ def run_hangman_game(max_lives: int) -> bool:
     print("            თამაში: Hangman")
     print("=" * 40)
 
-    secret_word = get_random_word()
+    secret_word, hint = get_random_word()
     guessed_letters: set = set()
     wrong_attempts = 0
 
-    print(f"სიტყვა ჩაფიქრებულია! გაქვთ უფლება შეცდეთ {max_lives}-ჯერ.\n")
+    print(f"სიტყვა ჩაფიქრებულია! გაქვთ უფლება შეცდეთ {max_lives}-ჯერ.")
+    print(f" ჰინტი: {hint}\n")
 
     while wrong_attempts < max_lives:
         current_view = display_current_state(secret_word, guessed_letters)
         print(HANGMAN_STAGES[wrong_attempts])
         print(f"\nსიტყვა: {current_view}")
         print(f"გამოყენებული ასოები: {', '.join(sorted(guessed_letters)) if guessed_letters else 'ჯერ არ არის'}")
-        print(f"❤️  დარჩენილი სიცოცხლე: {max_lives - wrong_attempts}\n")
+        print(f"  დარჩენილი სიცოცხლე: {max_lives - wrong_attempts}\n")
 
         if "_" not in current_view:
-            print(f"🎉 გილოცავთ! თქვენ გამოიცანით სიტყვა: {secret_word}\n")
+            print(f" გილოცავთ! თქვენ გამოიცანით სიტყვა: {secret_word}\n")
             return True
 
-        letter = get_valid_letter(guessed_letters)
+        guess_type, guess = get_user_guess(guessed_letters, hint)
+
+        if guess_type == "word":
+            if guess == secret_word:
+                # მომხმარებელმა წინასწარ მიხვდა მთელ სიტყვას
+                guessed_letters.update(secret_word)
+                print(f" ზუსტად მიხვდით! სიტყვა იყო: {secret_word}\n")
+                return True
+            else:
+                wrong_attempts += 1
+                print(f" არასწორია! სიტყვა '{guess}' არ არის სწორი პასუხი.\n")
+            continue
+
+        # guess_type == "letter"
+        letter = guess
         guessed_letters.add(letter)
 
         if letter in secret_word:
-            print(f"✅ სწორია! ასო '{letter}' არის სიტყვაში.\n")
+            print(f" სწორია! ასო '{letter}' არის სიტყვაში.\n")
         else:
             wrong_attempts += 1
-            print(f"❌ არასწორია! ასო '{letter}' არ არის სიტყვაში.\n")
+            print(f" არასწორია! ასო '{letter}' არ არის სიტყვაში.\n")
 
     print(HANGMAN_STAGES[wrong_attempts])
-    print("\n😢 სამწუხაროდ წააგეთ! ლიმიტი ამოიწურა.")
-    print(f"🔒 ჩაფიქრებული სიტყვა იყო: {secret_word}\n")
+    print("\n სამწუხაროდ წააგეთ! ლიმიტი ამოიწურა.")
+    print(f" ჩაფიქრებული სიტყვა იყო: {secret_word}\n")
     return False
 
 
@@ -206,11 +268,11 @@ def main() -> None:
         else:
             losses += 1
 
-        print(f"📊 სტატისტიკა ამ სესიაში — მოგება: {wins}, წაგება: {losses}\n")
+        print(f" სტატისტიკა ამ სესიაში — მოგება: {wins}, წაგება: {losses}\n")
 
         again = input("გსურთ კიდევ თამაში? (დიახ/არა): ").strip().lower()
         if again not in ("დიახ", "კი", "yes", "y"):
-            print("\nნახვამდის! 👋")
+            print("\nნახვამდის! ")
             break
         print()
 
@@ -219,4 +281,4 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print("\n\nთამაში შეწყდა მომხმარებლის მიერ. ნახვამდის! 👋")
+        print("\n\nთამაში შეწყდა მომხმარებლის მიერ. ნახვამდის! ")

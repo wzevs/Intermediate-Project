@@ -31,23 +31,23 @@ def main() -> None:
 
         if choice == "1":
             print("\n--- ირთვება კალკულატორი ---")
-            calculator.run_calculator()  # შეცვალე შენი ფუნქციის სახელით
+            calculator.main()  
             
         elif choice == "2":
             print("\n--- ირთვება რიცხვის გამოცნობა ---")
-            guess_number.run_guess_number()  # შეცვალე შენი ფუნქციის სახელით
+            guess_number.main()  
             
         elif choice == "3":
             print("\n--- ირთვება Hangman ---")
-            hangman.run_hangman()  # შეცვალე შენი ფუნქციის სახელით
+            hangman.main()  
             
         elif choice == "4":
             print("\n--- ირთვება თარჯიმანი ---")
-            translator.run_translator()  # შეცვალე შენი ფუნქციის სახელით
+            translator.run_translator()  
             
         elif choice == "5":
             print("\n--- ირთვება ბანკომატი ---")
-            atm.run_atm()  # ეს ზუსტად ვიცით, რომ ასე დავარქვით
+            atm.run_atm()  
             
         elif choice == "0":
             print("\nპროგრამა დასრულებულია. ნახვამდის!")

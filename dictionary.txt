@@ -126,3 +126,4 @@ ka-en|ბაბუა|grandfather
 en-ka|grandfather|ბაბუა
 ka-ru|ბაბუა|дедушка
 ru-ka|дедушка|ბაბუა
+ka-en|რეკომენდაცია|reccomendation

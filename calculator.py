@@ -22,7 +22,7 @@ def get_number(prompt: str) -> float:
         try:
             return float(raw_value)
         except ValueError:
-            print(f"❌ შეცდომა: '{raw_value}' არ არის სწორი რიცხვი. სცადეთ თავიდან.\n")
+            print(f" შეცდომა: '{raw_value}' არ არის სწორი რიცხვი. სცადეთ თავიდან.\n")
 
 
 def get_operation() -> str:
@@ -35,7 +35,7 @@ def get_operation() -> str:
         operation = input("აირჩიეთ მოქმედება (+, -, *, /): ").strip()
         if operation in valid_operations:
             return operation
-        print(f"❌ შეცდომა: '{operation}' არ არის ვალიდური მოქმედება. "
+        print(f" შეცდომა: '{operation}' არ არის ვალიდური მოქმედება. "
               f"გამოიყენეთ +, -, * ან /.\n")
 
 
@@ -86,13 +86,13 @@ def main():
             second_number = get_number("შეიყვანეთ მეორე რიცხვი: ")
 
             result = calculate(first_number, second_number, operation)
-            print("\n✅ შედეგი:")
+            print("\n შედეგი:")
             print(f"   {format_result(first_number, operation, second_number, result)}\n")
 
         except ZeroDivisionError as e:
-            print(f"\n❌ შეცდომა: {e}\n")
+            print(f"\n შეცდომა: {e}\n")
         except Exception as e:
-            print(f"\n❌ მოულოდნელი შეცდომა: {e}\n")
+            print(f"\n მოულოდნელი შეცდომა: {e}\n")
 
         again = input("გსურთ კიდევ ერთი გამოთვლა? (დიახ/არა): ").strip().lower()
         if again not in ("დიახ", "კი", "yes", "y"):

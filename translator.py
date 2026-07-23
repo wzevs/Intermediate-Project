@@ -67,7 +67,7 @@ def get_translation_direction() -> str:
         choice = input("თქვენი არჩევანი (1-4): ").strip()
         if choice in mapping:
             return mapping[choice]
-        print("❌ არასწორი არჩევანი. გთხოვთ აირჩიოთ 1-დან 4-მდე.\n")
+        print(" არასწორი არჩევანი. გთხოვთ აირჩიოთ 1-დან 4-მდე.\n")
 
 
 def get_word_to_translate() -> str:
@@ -82,7 +82,7 @@ def get_word_to_translate() -> str:
         if word.lower() == "exit":
             return word
         if DELIMITER in word:
-            print(f"❌ შეცდომა: სიტყვა/ფრაზა არ უნდა შეიცავდეს '{DELIMITER}' სიმბოლოს.\n")
+            print(f" შეცდომა: სიტყვა/ფრაზა არ უნდა შეიცავდეს '{DELIMITER}' სიმბოლოს.\n")
             continue
         return word
 
@@ -95,10 +95,10 @@ def get_translation_input(word: str) -> str:
     while True:
         translation = input(f"შეიყვანეთ '{word}'-ის თარგმანი: ").strip()
         if not translation:
-            print("❌ თარგმანი ცარიელი არ უნდა იყოს.\n")
+            print(" თარგმანი ცარიელი არ უნდა იყოს.\n")
             continue
         if DELIMITER in translation:
-            print(f"❌ შეცდომა: თარგმანი არ უნდა შეიცავდეს '{DELIMITER}' სიმბოლოს.\n")
+            print(f" შეცდომა: თარგმანი არ უნდა შეიცავდეს '{DELIMITER}' სიმბოლოს.\n")
             continue
         return translation
 
@@ -123,9 +123,9 @@ def run_translator() -> None:
         current_dict = dictionary.get(direction, {})
 
         if word.lower() in current_dict:
-            print(f"✅ თარგმანი: {current_dict[word.lower()]}")
+            print(f" თარგმანი: {current_dict[word.lower()]}")
         else:
-            print(f"🔍 სიტყვა '{word}' ლექსიკონში ვერ მოიძებნა.")
+            print(f" სიტყვა '{word}' ლექსიკონში ვერ მოიძებნა.")
             add_new = input("გსურთ ამ სიტყვის თარგმანის დამატება? (კი/არა): ").strip().lower()
 
             if add_new in ("კი", "დიახ", "yes", "y"):
@@ -136,7 +136,7 @@ def run_translator() -> None:
                 if direction not in dictionary:
                     dictionary[direction] = {}
                 dictionary[direction][word.lower()] = translation
-                print("🎉 ახალი სიტყვა წარმატებით დაემატა ლექსიკონს!")
+                print(" ახალი სიტყვა წარმატებით დაემატა ლექსიკონს!")
 
 
 if __name__ == "__main__":

@@ -88,12 +88,12 @@ def authenticate(accounts: dict) -> Optional[str]:
     """ითხოვს ანგარიშის ნომერს და PIN-ს. წარმატებისას აბრუნებს ანგარიშის ID-ს."""
     account_id = input("შეიყვანეთ ანგარიშის ნომერი: ").strip()
     if account_id not in accounts:
-        print("❌ ანგარიში ვერ მოიძებნა!\n")
+        print(" ანგარიში ვერ მოიძებნა!\n")
         return None
     
     pin = input("შეიყვანეთ PIN კოდი: ").strip()
     if pin != accounts[account_id]["pin"]:
-        print("❌ არასწორი PIN კოდი!\n")
+        print(" არასწორი PIN კოდი!\n")
         return None
     
     account = accounts[account_id]
@@ -111,9 +111,9 @@ def get_valid_amount(prompt: str) -> float:
             amount = float(input(prompt).strip())
             if amount > 0:
                 return amount
-            print("❌ შეცდომა: თანხა უნდა იყოს დადებითი რიცხვი!\n")
+            print(" შეცდომა: თანხა უნდა იყოს დადებითი რიცხვი!\n")
         except ValueError:
-            print("❌ შეცდომა: გთხოვთ შეიყვანოთ ვალიდური რიცხვი!\n")
+            print(" შეცდომა: გთხოვთ შეიყვანოთ ვალიდური რიცხვი!\n")
 
 
 def check_balance(accounts: dict, account_id: str) -> None:
@@ -142,7 +142,7 @@ def withdraw(accounts: dict, account_id: str) -> None:
     
     if amount > balance:
         print(
-            f"❌ ტრანზაქცია უარყოფილია: ანგარიშზე არ არის საკმარისი თანხა! "
+            f" ტრანზაქცია უარყოფილია: ანგარიშზე არ არის საკმარისი თანხა! "
             f"(ბალანსი: {balance:.2f} ლარი)"
         )
         return
@@ -201,7 +201,7 @@ def run_atm() -> None:
             print("ბანკომატის მოდული დაიხურა.")
             break
         else:
-            print("❌ არასწორი არჩევანი. სცადეთ თავიდან.")
+            print(" არასწორი არჩევანი. სცადეთ თავიდან.")
 
 
 if __name__ == "__main__":
